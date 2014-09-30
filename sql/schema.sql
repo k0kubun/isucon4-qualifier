@@ -15,3 +15,4 @@ CREATE TABLE IF NOT EXISTS `login_log` (
 ) DEFAULT CHARSET=utf8;
 
 ALTER TABLE login_log ADD INDEX user_id_succeeded(user_id, succeeded);
+ALTER TABLE login_log ADD INDEX ip_succeeded(ip, succeeded);
