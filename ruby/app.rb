@@ -20,8 +20,7 @@ module Isucon4
 
       def db
         Thread.current[:isu4_db] ||= Mysql2::Client.new(
-          host: ENV['ISU4_DB_HOST'] || 'localhost',
-          port: ENV['ISU4_DB_PORT'] ? ENV['ISU4_DB_PORT'].to_i : nil,
+          socket: ENV['ISU4_DB_SOCKET'] || '/tmp/mysql.sock',
           username: ENV['ISU4_DB_USER'] || 'root',
           password: ENV['ISU4_DB_PASSWORD'],
           database: ENV['ISU4_DB_NAME'] || 'isu4_qualifier',
