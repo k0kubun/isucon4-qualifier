@@ -37,38 +37,38 @@ module Isucon4
       def login_log(succeeded, login, user_id = nil)
         db.xquery("INSERT INTO login_log" \
                   " (`created_at`, `user_id`, `login`, `ip`, `succeeded`)" \
-                  " VALUES (?,?,?,?,?)",
+                  " VALUES (?,?,?,?,?)", # 15.8ms
                  Time.now, user_id, login, request.ip, succeeded ? 1 : 0)
       end
 
       def user_locked?(user)
         return nil unless user
-        log = db.xquery("SELECT COUNT(1) AS failures FROM login_log WHERE user_id = ? AND id > IFNULL((select id from login_log where user_id = ? AND succeeded = 1 ORDER BY id DESC LIMIT 1), 0);", user['id'], user['id']).first
+        log = db.xquery("SELECT COUNT(1) AS failures FROM login_log WHERE user_id = ? AND id > IFNULL((select id from login_log where user_id = ? AND succeeded = 1 ORDER BY id DESC LIMIT 1), 0);", user['id'], user['id']).first # 0.3ms
 
         config[:user_lock_threshold] <= log['failures']
       end
 
       def ip_banned?
-        log = db.xquery("SELECT COUNT(1) AS failures FROM login_log WHERE ip = ? AND id > IFNULL((select id from login_log where ip = ? AND succeeded = 1 ORDER BY id DESC LIMIT 1), 0);", request.ip, request.ip).first
+        log = db.xquery("SELECT COUNT(1) AS failures FROM login_log WHERE ip = ? AND id > IFNULL((select id from login_log where ip = ? AND succeeded = 1 ORDER BY id DESC LIMIT 1), 0);", request.ip, request.ip).first # 0.5ms
 
         config[:ip_ban_threshold] <= log['failures']
       end
 
       def attempt_login(login, password)
-        user = db.xquery('SELECT * FROM users WHERE login = ?', login).first
+        user = db.xquery('SELECT * FROM users WHERE login = ?', login).first # 0.8ms
 
-        if ip_banned?
+        if ip_banned? # 0.5ms
           login_log(false, login, user ? user['id'] : nil)
           return [nil, :banned]
         end
 
-        if user_locked?(user)
+        if user_locked?(user) # 0.3ms
           login_log(false, login, user['id'])
           return [nil, :locked]
         end
 
         if user && calculate_password_hash(password, user['salt']) == user['password_hash']
-          login_log(true, login, user['id'])
+          login_log(true, login, user['id']) # 15.9ms
           [user, nil]
         elsif user
           login_log(false, login, user['id'])
@@ -144,9 +144,9 @@ module Isucon4
     end
 
     post '/login' do
-      user, err = attempt_login(params[:login], params[:password])
+      user, err = attempt_login(params[:login], params[:password]) # 17.5ms
       if user
-        session[:user_id] = user['id']
+        session[:user_id] = user['id'] # 0.3ms
         redirect '/mypage'
       else
         case err
