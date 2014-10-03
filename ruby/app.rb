@@ -41,13 +41,32 @@ module Isucon4
 
       def user_locked?(user)
         return nil unless user
-        log = db.xquery("SELECT COUNT(1) AS failures FROM login_log WHERE user_id = ? AND id > IFNULL((select id from login_log where user_id = ? AND succeeded = 1 ORDER BY id DESC LIMIT 1), 0);", user['id'], user['id']).first # 0.3ms
+
+        # Subquery returns last succeeded login_log's id
+        # Counts login failures since last success by user_id
+        log = db.xquery(<<-SQL, user['id'], user['id']).first
+          SELECT COUNT(1) AS failures FROM login_log
+          WHERE user_id = ?
+          AND id > IFNULL(
+            (SELECT id FROM login_log WHERE user_id = ? AND succeeded = 1 ORDER BY id DESC LIMIT 1),
+            0
+          );
+        SQL
 
         config[:user_lock_threshold] <= log['failures']
       end
 
       def ip_banned?
-        log = db.xquery("SELECT COUNT(1) AS failures FROM login_log WHERE ip = ? AND id > IFNULL((select id from login_log where ip = ? AND succeeded = 1 ORDER BY id DESC LIMIT 1), 0);", request.ip, request.ip).first # 0.5ms
+        # Subquery returns last succeeded login_log's id
+        # Counts login failures since last success by ip
+        log = db.xquery(<<-SQL, request.ip, request.ip).first # 0.5ms
+          SELECT COUNT(1) AS failures FROM login_log
+          WHERE ip = ?
+          AND id > IFNULL(
+            (SELECT id FROM login_log WHERE ip = ? AND succeeded = 1 ORDER BY id DESC LIMIT 1),
+            0
+          );
+        SQL
 
         config[:ip_ban_threshold] <= log['failures']
       end
@@ -56,11 +75,13 @@ module Isucon4
         user = db.xquery('SELECT * FROM users WHERE login = ?', login).first # 0.8ms
 
         if ip_banned? # 0.5ms
+          # This will be validated in /report
           login_log(false, login, user ? user['id'] : nil)
           return [nil, :banned]
         end
 
         if user_locked?(user) # 0.3ms
+          # This will be validated in /report
           login_log(false, login, user['id'])
           return [nil, :locked]
         end
@@ -69,9 +90,11 @@ module Isucon4
           login_log(true, login, user['id']) # 15.9ms
           [user, nil]
         elsif user
+          # This affects ban judgement
           login_log(false, login, user['id'])
           [nil, :wrong_password]
         else
+          # This affects ban judgement
           login_log(false, login)
           [nil, :wrong_login]
         end
@@ -167,6 +190,9 @@ module Isucon4
       erb :mypage, layout: :base
     end
 
+    # Validated necessary parameters
+    #   banned_ips:   all banned user's `request.ip`
+    #   locked_users: all locked user's `users.login`
     get '/report' do
       content_type :json
       {
