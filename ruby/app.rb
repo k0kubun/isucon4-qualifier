@@ -47,6 +47,16 @@ module Isucon4
         SQL
       end
 
+      def redis_login_log(succeeded, login, user_id, created_at = Time.now.strftime("%Y-%m-%d %H:%M:%S"), ip = request.ip)
+        if succeeded
+          redis.set("login_failure_ip_#{ip}", 0)
+          redis.set("login_failure_user_id_#{user_id}", 0)
+        else
+          redis.incr("login_failure_ip_#{ip}")
+          redis.incr("login_failure_user_id_#{user_id}")
+        end
+      end
+
       def user_locked?(user)
         return nil unless user
 
@@ -211,6 +221,22 @@ module Isucon4
         banned_ips: banned_ips,
         locked_users: locked_users,
       }.to_json
+    end
+
+    get '/init' do
+      last_id = db.xquery("SELECT MAX(id) AS last_id FROM login_log").first["last_id"]
+      (1..last_id).each_slice(10000) do |ids|
+        login_logs = db.xquery("SELECT * FROM login_log WHERE id IN (#{ids.join(',')})").to_a
+        login_logs.each do |login_log|
+          redis_login_log(
+            login_log['succeeded'] == 1,
+            login_log['login'],
+            login_log['user_id'],
+            created_at.strftime("%Y-%m-%d %H:%M:%S"),
+            login_log['ip'],
+          )
+        end
+      end
     end
   end
 end
