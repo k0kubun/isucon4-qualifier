@@ -124,9 +124,10 @@ module Isucon4
       def last_login
         return nil unless current_user
 
-        db.xquery(<<-SQL, current_user['id']).to_a.last
-          SELECT * FROM login_log WHERE succeeded = 1 AND user_id = ? ORDER BY id DESC LIMIT 2
-        SQL
+        raw_current = redis.get("current_login_#{current_user['id']}")
+        raw_last = redis.get("last_login_#{current_user['id']}")
+
+        Marshal.load([raw_current, raw_last].compact.last)
       end
 
       def banned_ips
