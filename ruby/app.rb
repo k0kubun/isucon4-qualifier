@@ -4,6 +4,7 @@ require 'mysql2-cs-bind'
 require 'rack-flash'
 require 'json'
 require "rack-lineprof"
+require "redis"
 
 module Isucon4
   class App < Sinatra::Base
@@ -28,6 +29,10 @@ module Isucon4
           database: ENV['ISU4_DB_NAME'] || 'isu4_qualifier',
           reconnect: true,
         )
+      end
+
+      def redis
+        @redis ||= Redis.new
       end
 
       def calculate_password_hash(password, salt)
