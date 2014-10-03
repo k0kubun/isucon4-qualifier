@@ -40,11 +40,6 @@ module Isucon4
       end
 
       def login_log(succeeded, login, user_id = nil)
-        db.xquery(<<-SQL, Time.now, user_id, login, request.ip, succeeded ? 1 : 0)
-          INSERT INTO login_log
-          (created_at, user_id, login, ip, succeeded)
-          VALUES (?,?,?,?,?)
-        SQL
         redis_login_log(succeeded, login, user_id)
       end
 
