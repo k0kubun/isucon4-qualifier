@@ -63,8 +63,15 @@ module Isucon4
           redis.set("current_login_#{user_id}", Marshal.dump(current_login))
           redis.set("last_login_#{user_id}", last_login) if last_login
         else
-          redis.incr("login_failure_ip_#{ip}")
-          redis.incr("login_failure_user_id_#{user_id}")
+          failures = redis.incr("login_failure_ip_#{ip}")
+          if config[:ip_ban_threshold] <= failures
+            redis.sadd("banned_ips", ip)
+          end
+
+          failures = redis.incr("login_failure_user_id_#{user_id}")
+          if config[:user_lock_threshold] <= failures
+            redis.sadd("locked_users", login)
+          end
         end
       end
 
