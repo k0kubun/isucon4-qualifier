@@ -235,7 +235,7 @@ module Isucon4
             login_log['succeeded'] == 1,
             login_log['login'],
             login_log['user_id'],
-            created_at.strftime("%Y-%m-%d %H:%M:%S"),
+            login_log['created_at'].strftime("%Y-%m-%d %H:%M:%S"),
             login_log['ip'],
           )
         end
