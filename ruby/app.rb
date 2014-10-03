@@ -63,7 +63,7 @@ module Isucon4
 
         # Subquery returns last succeeded login_log's id
         # Counts login failures since last success by user_id
-        log = db.xquery(<<-SQL, user['id'], user['id']).first
+        failure_count = db.xquery(<<-SQL, user['id'], user['id']).first['failures']
           SELECT COUNT(1) AS failures FROM login_log
           WHERE user_id = ?
           AND id > IFNULL(
@@ -71,12 +71,25 @@ module Isucon4
             0
           );
         SQL
+        # failure_count = redis.get("login_failure_user_id_#{user['id']}").to_i
 
-        config[:user_lock_threshold] <= log['failures']
+        config[:user_lock_threshold] <= failure_count
       end
 
       def ip_banned?
-        config[:ip_ban_threshold] <= redis.get("login_failure_ip_#{request.ip}").to_i
+        # Subquery returns last succeeded login_log's id
+        # Counts login failures since last success by ip
+        # failure_count = db.xquery(<<-SQL, request.ip, request.ip).first['failures']
+        #   SELECT COUNT(1) AS failures FROM login_log
+        #   WHERE ip = ?
+        #   AND id > IFNULL(
+        #     (SELECT id FROM login_log WHERE ip = ? AND succeeded = 1 ORDER BY id DESC LIMIT 1),
+        #     0
+        #   );
+        # SQL
+        failure_count = redis.get("login_failure_ip_#{request.ip}").to_i
+
+        config[:ip_ban_threshold] <= failure_count
       end
 
       def attempt_login(login, password)
