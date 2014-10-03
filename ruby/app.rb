@@ -45,6 +45,7 @@ module Isucon4
           (created_at, user_id, login, ip, succeeded)
           VALUES (?,?,?,?,?)
         SQL
+        redis_login_log(succeeded, login, user_id)
       end
 
       def redis_login_log(succeeded, login, user_id, created_at = Time.now.strftime("%Y-%m-%d %H:%M:%S"), ip = request.ip)
@@ -75,18 +76,7 @@ module Isucon4
       end
 
       def ip_banned?
-        # Subquery returns last succeeded login_log's id
-        # Counts login failures since last success by ip
-        log = db.xquery(<<-SQL, request.ip, request.ip).first # 0.5ms
-          SELECT COUNT(1) AS failures FROM login_log
-          WHERE ip = ?
-          AND id > IFNULL(
-            (SELECT id FROM login_log WHERE ip = ? AND succeeded = 1 ORDER BY id DESC LIMIT 1),
-            0
-          );
-        SQL
-
-        config[:ip_ban_threshold] <= log['failures']
+        config[:ip_ban_threshold] <= redis.get("login_failure_ip_#{request.ip}").to_i
       end
 
       def attempt_login(login, password)
