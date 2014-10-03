@@ -138,23 +138,7 @@ module Isucon4
       end
 
       def banned_ips
-        ips = []
-        threshold = config[:ip_ban_threshold]
-
-        not_succeeded = db.xquery('SELECT ip FROM (SELECT ip, MAX(succeeded) as max_succeeded, COUNT(1) as cnt FROM login_log GROUP BY ip) AS t0 WHERE t0.max_succeeded = 0 AND t0.cnt >= ?', threshold)
-
-        ips.concat not_succeeded.each.map { |r| r['ip'] }
-
-        last_succeeds = db.xquery('SELECT ip, MAX(id) AS last_login_id FROM login_log WHERE succeeded = 1 GROUP by ip')
-
-        last_succeeds.each do |row|
-          count = db.xquery('SELECT COUNT(1) AS cnt FROM login_log WHERE ip = ? AND ? < id', row['ip'], row['last_login_id']).first['cnt']
-          if threshold <= count
-            ips << row['ip']
-          end
-        end
-
-        ips
+        redis.smembers("banned_ips")
       end
 
       def locked_users
