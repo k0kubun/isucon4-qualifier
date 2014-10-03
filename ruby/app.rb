@@ -52,6 +52,16 @@ module Isucon4
         if succeeded
           redis.set("login_failure_ip_#{ip}", 0)
           redis.set("login_failure_user_id_#{user_id}", 0)
+
+          current_login = {
+            created_at: created_at,
+            ip: ip,
+            login: login,
+          }
+          last_login = redis.get("current_login_#{user_id}")
+
+          redis.set("current_login_#{user_id}", Marshal.dump(current_login))
+          redis.set("last_login_#{user_id}", last_login) if last_login
         else
           redis.incr("login_failure_ip_#{ip}")
           redis.incr("login_failure_user_id_#{user_id}")
