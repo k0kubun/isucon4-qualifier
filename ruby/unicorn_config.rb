@@ -3,5 +3,5 @@ preload_app true
 
 listen "/tmp/app.sock"
 
-stderr_path "/tmp/unicorn.log"
-stdout_path "/tmp/unicorn.log"
+# stderr_path "/tmp/unicorn.log"
+# stdout_path "/tmp/unicorn.log"
