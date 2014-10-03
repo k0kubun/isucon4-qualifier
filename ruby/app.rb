@@ -116,10 +116,14 @@ module Isucon4
         @current_user
       end
 
+      # Shown in /mypage
+      # This affects check result
       def last_login
         return nil unless current_user
 
-        db.xquery('SELECT * FROM login_log WHERE succeeded = 1 AND user_id = ? ORDER BY id DESC LIMIT 2', current_user['id']).each.last
+        db.xquery(<<-SQL, current_user['id']).to_a.last
+          SELECT * FROM login_log WHERE succeeded = 1 AND user_id = ? ORDER BY id DESC LIMIT 2
+        SQL
       end
 
       def banned_ips
