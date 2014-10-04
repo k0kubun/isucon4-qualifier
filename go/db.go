@@ -81,7 +81,6 @@ func isBannedIP(ip string) (bool, error) {
 
 func attemptLogin(req *http.Request) (*User, error) {
 	succeeded := false
-	user := &User{}
 
 	loginName := req.PostFormValue("login")
 	password := req.PostFormValue("password")
@@ -91,15 +90,17 @@ func attemptLogin(req *http.Request) (*User, error) {
 		remoteAddr = xForwardedFor
 	}
 
+	user, err := findUserByLogin(loginName)
+
 	defer func() {
 		createLoginLog(succeeded, remoteAddr, loginName, user)
 	}()
 
-	row := db.QueryRow(
-		"SELECT id, login, password_hash, salt FROM users WHERE login = ?",
-		loginName,
-	)
-	err := row.Scan(&user.ID, &user.Login, &user.PasswordHash, &user.Salt)
+	// row := db.QueryRow(
+	// 	"SELECT id, login, password_hash, salt FROM users WHERE login = ?",
+	// 	loginName,
+	// )
+	// err := row.Scan(&user.ID, &user.Login, &user.PasswordHash, &user.Salt)
 
 	switch {
 	case err == sql.ErrNoRows:
