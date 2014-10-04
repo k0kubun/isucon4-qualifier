@@ -155,20 +155,18 @@ module Isucon4
       else
         case err
         when :locked
-          flash[:notice] = "This account is locked."
+          redirect '/?err=locked'
         when :banned
-          flash[:notice] = "You're banned."
+          redirect '/?err=banned'
         else
-          flash[:notice] = "Wrong username or password"
+          redirect '/?err=wrong'
         end
-        redirect '/'
       end
     end
 
     get '/mypage' do
       unless current_user
-        flash[:notice] = "You must be logged in"
-        redirect '/'
+        redirect '/?err=invalid'
       end
       erb :mypage, layout: :base
     end
