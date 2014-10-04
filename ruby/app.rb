@@ -5,6 +5,7 @@ require 'rack-flash'
 require 'json'
 require "rack-lineprof"
 require "redis"
+require_relative "./users"
 
 module Isucon4
   class App < Sinatra::Base
@@ -80,26 +81,27 @@ module Isucon4
       end
 
       def attempt_login(login, password)
-        user = db.xquery('SELECT * FROM users WHERE login = ?', login).first # 0.8ms
+        # user = db.xquery('SELECT * FROM users WHERE login = ?', login).first # 0.8ms
+        user = USER_BY_LOGIN[login.to_sym]
 
         if ip_banned? # 0.5ms
           # This will be validated in /report
-          login_log(false, login, user ? user['id'] : nil)
+          login_log(false, login, user ? user[:id] : nil)
           return [nil, :banned]
         end
 
         if user_locked?(user) # 0.3ms
           # This will be validated in /report
-          login_log(false, login, user['id'])
+          login_log(false, login, user[:id])
           return [nil, :locked]
         end
 
-        if user && calculate_password_hash(password, user['salt']) == user['password_hash']
-          login_log(true, login, user['id']) # 15.9ms
+        if user && calculate_password_hash(password, user[:salt]) == user[:password_hash]
+          login_log(true, login, user[:id]) # 15.9ms
           [user, nil]
         elsif user
           # This affects ban judgement
-          login_log(false, login, user['id'])
+          login_log(false, login, user[:id])
           [nil, :wrong_password]
         else
           # This affects ban judgement
