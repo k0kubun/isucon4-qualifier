@@ -5,17 +5,11 @@ require 'rack-flash'
 require 'json'
 require "rack-lineprof"
 require "redis"
-require "rack/session/redis"
 require_relative "./users"
 
 module Isucon4
   class App < Sinatra::Base
-    # use Rack::Session::Cookie, secret: ENV['ISU4_SESSION_SECRET'] || 'shirokane'
-    use Rack::Session::Redis, {
-      url: "redis://localhost:6379/0",
-      namespace: "rack:session",
-      expire_after: 600,
-    }
+    use Rack::Session::Cookie, secret: ENV['ISU4_SESSION_SECRET'] || 'shirokane'
     use Rack::Flash
     use Rack::Lineprof, profile: "app.rb" if ENV["RACK_ENV"] != "production"
     set :public_folder, File.expand_path('../../public', __FILE__)
@@ -39,7 +33,7 @@ module Isucon4
       end
 
       def redis
-        @redis ||= Redis.new
+        @redis ||= Redis.new(path: "/tmp/redis.sock")
       end
 
       def calculate_password_hash(password, salt)
