@@ -175,6 +175,8 @@ module Isucon4
     #   banned_ips:   all banned user's `request.ip`
     #   locked_users: all locked user's `users.login`
     get '/report' do
+      redis.save
+
       content_type :json
       {
         banned_ips: banned_ips,
