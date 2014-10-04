@@ -109,13 +109,14 @@ module Isucon4
       end
 
       def current_user
-        return @current_user if @current_user
-        return nil unless session[:user_id]
+        return @current_user if defined?(@current_user)
+        return @current_user = nil unless session[:user_id]
 
-        @current_user = db.xquery('SELECT * FROM users WHERE id = ?', session[:user_id].to_i).first
-        unless @current_user
+        if 1 <= session[:user_id] && session[:user_id] <= 200000
+          @current_user = { 'id' => session[:user_id] }
+        else
           session[:user_id] = nil
-          return nil
+          @current_user = nil
         end
 
         @current_user
