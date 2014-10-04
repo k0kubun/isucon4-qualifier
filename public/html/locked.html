@@ -2,15 +2,23 @@
 <html>
   <head>
     <meta charset="UTF-8">
-    <link rel="stylesheet" href="/stylesheets/bootstrap.min.css">
-    <link rel="stylesheet" href="/stylesheets/bootflat.min.css">
-    <link rel="stylesheet" href="/stylesheets/isucon-bank.css">
+    <script id="css">
+    document.write('<link rel="stylesheet" href="/stylesheets/bootstrap.min.css"> <link rel="stylesheet" href="/stylesheets/bootflat.min.css"> <link rel="stylesheet" href="/stylesheets/isucon-bank.css">');
+    script = document.getElementById('css');
+    script.parentNode.removeChild(script);
+    </script>
     <title>isucon4</title>
   </head>
   <body>
     <div class="container">
       <h1 id="topbar">
-        <a href="/"><img src="/images/isucon-bank.png" alt="いすこん銀行 オンラインバンキングサービス"></a>
+        <a href="/">
+          <script id="img">
+          document.write('<img src="/images/isucon-bank.png" alt="いすこん銀行 オンラインバンキングサービス">');
+          script = document.getElementById('img');
+          script.parentNode.removeChild(script);
+          </script>
+        </a>
       </h1>
       <div id="be-careful-phising" class="panel panel-danger">
   <div class="panel-heading">
