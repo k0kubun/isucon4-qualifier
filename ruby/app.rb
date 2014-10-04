@@ -150,7 +150,7 @@ module Isucon4
     post '/login' do
       user, err = attempt_login(params[:login], params[:password]) # 17.5ms
       if user
-        session[:user_id] = user['id'] # 0.3ms
+        session[:user_id] = user[:id] # 0.3ms
         redirect '/mypage'
       else
         case err
