@@ -10,6 +10,7 @@ import (
 	"net"
 	"net/http"
 	"strconv"
+	"runtime"
 )
 
 var db *sql.DB
@@ -47,6 +48,8 @@ func init() {
 }
 
 func main() {
+	runtime.GOMAXPROCS(4)
+
 	m := martini.Classic()
 
 	store := sessions.NewCookieStore([]byte("secret-isucon"))
