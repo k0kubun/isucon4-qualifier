@@ -67,19 +67,16 @@ func main() {
 	m.Post("/login", func(req *http.Request, r render.Render, session sessions.Session) {
 		user, err := attemptLogin(req)
 
-		notice := ""
 		if err != nil || user == nil {
 			switch err {
 			case ErrBannedIP:
-				notice = "You're banned."
+				r.Redirect("/?err=banned")
 			case ErrLockedUser:
-				notice = "This account is locked."
+				r.Redirect("/?err=locked")
 			default:
-				notice = "Wrong username or password"
+				r.Redirect("/?err=wrong")
 			}
 
-			session.Set("notice", notice)
-			r.Redirect("/")
 			return
 		}
 
@@ -91,8 +88,7 @@ func main() {
 		currentUser := getCurrentUser(session.Get("user_id"))
 
 		if currentUser == nil {
-			session.Set("notice", "You must be logged in")
-			r.Redirect("/")
+			r.Redirect("/?err=invalid")
 			return
 		}
 
