@@ -5,6 +5,7 @@ require 'rack-flash'
 require 'json'
 require "rack-lineprof"
 require "redis"
+require_relative "./users"
 
 module Isucon4
   class App < Sinatra::Base
@@ -80,7 +81,8 @@ module Isucon4
       end
 
       def attempt_login(login, password)
-        user = db.xquery('SELECT * FROM users WHERE login = ?', login).first # 0.8ms
+        # user = db.xquery('SELECT * FROM users WHERE login = ?', login).first # 0.8ms
+        user = USER_BY_LOGIN[login]
 
         if ip_banned? # 0.5ms
           # This will be validated in /report
