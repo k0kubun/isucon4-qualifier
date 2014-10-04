@@ -80,8 +80,7 @@ module Isucon4
       end
 
       def attempt_login(login, password)
-        raw_user = redis.get("user_login_#{login}")
-        user = load_user(raw_user)
+        user = db.xquery('SELECT * FROM users WHERE login = ?', login).first # 0.8ms
 
         if ip_banned? # 0.5ms
           # This will be validated in /report
@@ -113,8 +112,7 @@ module Isucon4
         return @current_user if @current_user
         return nil unless session[:user_id]
 
-        raw_user = redis.get("user_id_#{session[:user_id]}")
-        @current_user = load_user(raw_user)
+        @current_user = db.xquery('SELECT * FROM users WHERE id = ?', session[:user_id].to_i).first
         unless @current_user
           session[:user_id] = nil
           return nil
@@ -140,21 +138,6 @@ module Isucon4
 
       def locked_users
         redis.smembers("locked_users")
-      end
-
-      def dump_user(user)
-        "#{user['id']};#{user['password_hash']};#{user['salt']}"
-      end
-
-      def load_user(dumped)
-        return nil unless dumped
-
-        id, password_hash, salt = dumped.split(';')
-        {
-          id: id,
-          password_hash: password_hash,
-          salt: salt,
-        }
       end
     end
 
@@ -200,16 +183,6 @@ module Isucon4
     end
 
     get '/init' do
-      last_id = db.xquery("SELECT MAX(id) AS last_id FROM users").first["last_id"]
-      (1..last_id).each_slice(10000) do |ids|
-        users = db.xquery("SELECT * FROM users WHERE id IN (#{ids.join(',')})").to_a
-        users.each do |user|
-          dumped = dump_user(user)
-          redis.set("user_id_#{user['id']}", dumped)
-          redis.set("user_login_#{user['login']}", dumped)
-        end
-      end
-
       last_id = db.xquery("SELECT MAX(id) AS last_id FROM login_log").first["last_id"]
       (1..last_id).each_slice(10000) do |ids|
         login_logs = db.xquery("SELECT * FROM login_log WHERE id IN (#{ids.join(',')})").to_a
