@@ -7,7 +7,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/martini-contrib/render"
 	"github.com/martini-contrib/sessions"
-	"net"
+	// "net"
 	"net/http"
 	"strconv"
 	"runtime"
@@ -103,11 +103,13 @@ func main() {
 		})
 	})
 
-	l, err := net.Listen("unix", "/tmp/app.sock")
-	if err != nil {
-		fmt.Println(err.Error())
-		return
-	}
+	// l, err := net.Listen("unix", "/tmp/app.sock")
+	// if err != nil {
+	// 	fmt.Println(err.Error())
+	// 	return
+	// }
 
-	http.Serve(l, m)
+	// http.Serve(l, m)
+
+	http.ListenAndServe(":8080", m)
 }
