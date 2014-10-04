@@ -26,6 +26,8 @@ GEM
       rack
     rack-protection (1.5.3)
       rack
+    rack-session-redis (0.0.3)
+      redis (>= 2.0.0)
     raindrops (0.13.0)
     rblineprof (0.3.6)
       debugger-ruby_core_source (~> 1.3)
@@ -52,6 +54,7 @@ DEPENDENCIES
   mysql2-cs-bind
   rack-flash3
   rack-lineprof!
+  rack-session-redis
   redis
   sinatra
   unicorn
