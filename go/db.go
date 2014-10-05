@@ -31,43 +31,11 @@ func isLockedUser(user *User) (bool, error) {
 		return false, nil
 	}
 
-	var ni sql.NullInt64
-	row := db.QueryRow(
-		"SELECT COUNT(1) AS failures FROM login_log WHERE "+
-			"user_id = ? AND id > IFNULL((select id from login_log where user_id = ? AND "+
-			"succeeded = 1 ORDER BY id DESC LIMIT 1), 0);",
-		user.ID, user.ID,
-	)
-	err := row.Scan(&ni)
-
-	switch {
-	case err == sql.ErrNoRows:
-		return false, nil
-	case err != nil:
-		return false, err
-	}
-
-	return UserLockThreshold <= int(ni.Int64), nil
+	return logger.isLockedUserId(user.ID)
 }
 
 func isBannedIP(ip string) (bool, error) {
-	var ni sql.NullInt64
-	row := db.QueryRow(
-		"SELECT COUNT(1) AS failures FROM login_log WHERE "+
-			"ip = ? AND id > IFNULL((select id from login_log where ip = ? AND "+
-			"succeeded = 1 ORDER BY id DESC LIMIT 1), 0);",
-		ip, ip,
-	)
-	err := row.Scan(&ni)
-
-	switch {
-	case err == sql.ErrNoRows:
-		return false, nil
-	case err != nil:
-		return false, err
-	}
-
-	return IPBanThreshold <= int(ni.Int64), nil
+	return logger.isBannedIP(ip)
 }
 
 func attemptLogin(req *http.Request) (*User, error) {
@@ -134,6 +102,7 @@ func getCurrentUser(userId interface{}) *User {
 	return user
 }
 
+// All banned users' req.remoteAddr
 func bannedIPs() []string {
 	ips := []string{}
 
@@ -200,6 +169,7 @@ func bannedIPs() []string {
 	return ips
 }
 
+// All locked users' `users.login`
 func lockedUsers() []string {
 	userIds := []string{}
 
