@@ -22,6 +22,8 @@ type Storage struct {
 	failCountByIp map[string]int
 	userByLogin   map[string]*User
 	userById      map[int]*User
+	currentLoginByUserId map[int]*LastLogin
+	lastLoginByUserId map[int]*LastLogin
 }
 
 func NewStorage() *Storage {
@@ -36,6 +38,8 @@ func (s *Storage) EnableOnMemoryMode() {
 	s.failCountByIp = make(map[string]int, 100000)
 	s.userByLogin = make(map[string]*User, 200000)
 	s.userById = make(map[int]*User, 200000)
+	s.currentLoginByUserId = make(map[int]*LastLogin, 200000)
+	s.lastLoginByUserId = make(map[int]*LastLogin, 200000)
 }
 
 func (s *Storage) DisableOnMemoryMode() {
@@ -44,6 +48,8 @@ func (s *Storage) DisableOnMemoryMode() {
 	s.failCountByIp = map[string]int{}
 	s.userByLogin = map[string]*User{}
 	s.userById = map[int]*User{}
+	s.currentLoginByUserId = map[int]*LastLogin{}
+	s.lastLoginByUserId = map[int]*LastLogin{}
 }
 
 // Loads all data from mysql, and enables OnMemoryMode.
@@ -105,6 +111,13 @@ func (s *Storage) applyLoginLog(log *LoginLog) error {
 	if log.Succeeded {
 		s.failCountByIp[log.Ip] = 0
 		s.failCountByUserId[log.UserId] = 0
+
+		s.lastLoginByUserId[log.UserId] = s.currentLoginByUserId[log.UserId]
+		s.currentLoginByUserId[log.UserId] = &LastLogin{
+			Login:     log.Login,
+			IP:        log.Ip,
+			CreatedAt: log.CreatedAt,
+		}
 	} else {
 		s.failCountByIp[log.Ip]++
 		s.failCountByUserId[log.UserId]++
@@ -203,25 +216,35 @@ func (s *Storage) isBannedIP(ip string) (bool, error) {
 func (s *Storage) lastLoginOfUserId(userId int) *LastLogin {
 	var lastLogin *LastLogin
 
-	rows, err := db.Query(
-		"SELECT login, ip, created_at FROM login_log WHERE succeeded = 1 AND user_id = ? ORDER BY id DESC LIMIT 2",
-		userId,
-	)
+	if s.OnMemoryMode {
+		lastLogin = s.lastLoginByUserId[userId]
 
-	if err != nil {
-		return nil
-	}
+		if lastLogin != nil {
+			return lastLogin
+		} else {
+			return s.currentLoginByUserId[userId]
+		}
+	} else {
+		rows, err := db.Query(
+			"SELECT login, ip, created_at FROM login_log WHERE succeeded = 1 AND user_id = ? ORDER BY id DESC LIMIT 2",
+			userId,
+		)
 
-	defer rows.Close()
-	for rows.Next() {
-		lastLogin = &LastLogin{}
-		err = rows.Scan(&lastLogin.Login, &lastLogin.IP, &lastLogin.CreatedAt)
 		if err != nil {
 			return nil
 		}
-	}
 
-	return lastLogin
+		defer rows.Close()
+		for rows.Next() {
+			lastLogin = &LastLogin{}
+			err = rows.Scan(&lastLogin.Login, &lastLogin.IP, &lastLogin.CreatedAt)
+			if err != nil {
+				return nil
+			}
+		}
+
+		return lastLogin
+	}
 }
 
 func (s *Storage) userByLoginName(loginName string) *User {
