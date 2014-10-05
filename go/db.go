@@ -75,18 +75,7 @@ func attemptLogin(req *http.Request) (*User, error) {
 }
 
 func getCurrentUser(userId interface{}) *User {
-	user := &User{}
-	row := db.QueryRow(
-		"SELECT id, login, password_hash, salt FROM users WHERE id = ?",
-		userId,
-	)
-	err := row.Scan(&user.ID, &user.Login, &user.PasswordHash, &user.Salt)
-
-	if err != nil {
-		return nil
-	}
-
-	return user
+	return storage.userByUserId(userId)
 }
 
 // All banned users' req.remoteAddr

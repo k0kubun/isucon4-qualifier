@@ -21,6 +21,7 @@ type Storage struct {
 	failCountByUserId map[int]int
 	failCountByIp map[string]int
 	userByLogin   map[string]*User
+	userById      map[int]*User
 }
 
 func NewStorage() *Storage {
@@ -34,6 +35,7 @@ func (s *Storage) EnableOnMemoryMode() {
 	s.failCountByUserId = make(map[int]int, 200000)
 	s.failCountByIp = make(map[string]int, 100000)
 	s.userByLogin = make(map[string]*User, 200000)
+	s.userById = make(map[int]*User, 200000)
 }
 
 func (s *Storage) DisableOnMemoryMode() {
@@ -41,6 +43,7 @@ func (s *Storage) DisableOnMemoryMode() {
 	s.failCountByUserId = map[int]int{}
 	s.failCountByIp = map[string]int{}
 	s.userByLogin = map[string]*User{}
+	s.userById = map[int]*User{}
 }
 
 // Loads all data from mysql, and enables OnMemoryMode.
@@ -73,6 +76,7 @@ func (s *Storage) LoadOnMemory() {
 			user := new(User)
 			rows.Scan(&user.ID, &user.Login, &user.PasswordHash, &user.Salt)
 			s.userByLogin[user.Login] = user
+			s.userById[user.ID] = user
 		}
 
 		rows.Close()
@@ -235,6 +239,25 @@ func (s *Storage) userByLoginName(loginName string) *User {
 			loginName,
 		)
 		err := row.Scan(&user.ID, &user.Login, &user.PasswordHash, &user.Salt)
+		if err != nil {
+			return nil
+		}
+
+		return user
+	}
+}
+
+func (s *Storage) userByUserId(userId interface{}) *User {
+	if s.OnMemoryMode {
+		return s.userById[userId.(int)]
+	} else {
+		user := &User{}
+		row := db.QueryRow(
+			"SELECT id, login, password_hash, salt FROM users WHERE id = ?",
+			userId,
+		)
+		err := row.Scan(&user.ID, &user.Login, &user.PasswordHash, &user.Salt)
+
 		if err != nil {
 			return nil
 		}

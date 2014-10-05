@@ -101,7 +101,7 @@ func postLogin(c *gin.Context) {
 	}
 
 	session, _ := store.Get(c.Request, "isu4_qualifier")
-	session.Values["user_id"] = strconv.Itoa(user.ID)
+	session.Values["user_id"] = user.ID
 	session.Save(c.Request, c.Writer)
 
 	c.Redirect(302, "/mypage")
