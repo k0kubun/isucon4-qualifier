@@ -15,7 +15,7 @@ var (
 )
 
 func createLoginLog(succeeded bool, remoteAddr, login string, user *User) error {
-	err := logger.Post(&LoginLog{
+	err := storage.PostLoginLog(&LoginLog{
 		CreatedAt: time.Now(),
 		UserId:    user.ID,
 		Login:     login,
@@ -31,11 +31,11 @@ func isLockedUser(user *User) (bool, error) {
 		return false, nil
 	}
 
-	return logger.isLockedUserId(user.ID)
+	return storage.isLockedUserId(user.ID)
 }
 
 func isBannedIP(ip string) (bool, error) {
-	return logger.isBannedIP(ip)
+	return storage.isBannedIP(ip)
 }
 
 func attemptLogin(req *http.Request) (*User, error) {

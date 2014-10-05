@@ -11,7 +11,7 @@ import (
 )
 
 var db *sql.DB
-var logger *Logger
+var storage *Storage
 var store = sessions.NewCookieStore([]byte("secret-isucon"))
 var (
 	UserLockThreshold int
@@ -45,7 +45,7 @@ func init() {
 		panic(err)
 	}
 
-	logger = NewLogger()
+	storage = NewStorage()
 }
 
 func getIndex(c *gin.Context) {
@@ -53,7 +53,7 @@ func getIndex(c *gin.Context) {
 }
 
 func loadLoginLog(c *gin.Context) {
-	logger.LoadLoginLog()
+	storage.LoadLoginLog()
 	c.String(200, "done")
 }
 
@@ -77,7 +77,7 @@ func getMypage(c *gin.Context) {
 }
 
 func getReport(c *gin.Context) {
-	logger.FlushLoginLog()
+	storage.FlushLoginLog()
 	c.JSON(200, map[string][]string{
 		"banned_ips":   bannedIPs(),
 		"locked_users": lockedUsers(),

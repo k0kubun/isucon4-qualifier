@@ -20,6 +20,6 @@ type LastLogin struct {
 }
 
 func (u *User) getLastLogin() *LastLogin {
-	u.LastLogin = logger.lastLoginOfUserId(u.ID)
+	u.LastLogin = storage.lastLoginOfUserId(u.ID)
 	return u.LastLogin
 }
