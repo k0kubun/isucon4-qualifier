@@ -11,7 +11,7 @@ ssh -t -t $ssh_host <<-EOS
   /home/isucon/env.sh /home/isucon/webapp/go/build.sh
   sudo sysctl -p
   sudo service mysqld restart
-  sudo service nginx restart
+  sudo service nginx stop
   sudo service supervisord reload
   sudo supervisorctl stop isucon_go
   sudo rm -f /tmp/app.sock

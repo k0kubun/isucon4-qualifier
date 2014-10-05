@@ -49,7 +49,349 @@ func init() {
 }
 
 func getIndex(c *gin.Context) {
-	c.HTML(200, "index.tmpl", gin.H{"Flash": getFlash(c, "notice")})
+	query := c.Request.URL.Query()
+	param := query.Get("err")
+
+	if param == "banned" {
+		c.Data(200, "text/html", []byte(`
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <script id="css">
+    document.write('<link rel="stylesheet" href="/stylesheets/bootstrap.min.css"> <link rel="stylesheet" href="/stylesheets/bootflat.min.css"> <link rel="stylesheet" href="/stylesheets/isucon-bank.css">');
+    script = document.getElementById('css');
+    script.parentNode.removeChild(script);
+    </script>
+    <title>isucon4</title>
+  </head>
+  <body>
+    <div class="container">
+      <h1 id="topbar">
+        <a href="/">
+          <script id="img">
+          document.write('<img src="/images/isucon-bank.png" alt="いすこん銀行 オンラインバンキングサービス">');
+          script = document.getElementById('img');
+          script.parentNode.removeChild(script);
+          </script>
+        </a>
+      </h1>
+      <div id="be-careful-phising" class="panel panel-danger">
+  <div class="panel-heading">
+    <span class="hikaru-mozi">偽画面にご注意ください！</span>
+  </div>
+  <div class="panel-body">
+    <p>偽のログイン画面を表示しお客様の情報を盗み取ろうとする犯罪が多発しています。</p>
+    <p>ログイン直後にダウンロード中や、見知らぬウィンドウが開いた場合、<br>すでにウィルスに感染している場合がございます。即座に取引を中止してください。</p>
+    <p>また、残高照会のみなど、必要のない場面で乱数表の入力を求められても、<br>絶対に入力しないでください。</p>
+  </div>
+</div>
+
+<div class="page-header">
+  <h1>ログイン</h1>
+</div>
+
+  <div id="notice-message" class="alert alert-danger" role="alert">You're banned.</div>
+
+<div class="container">
+  <form class="form-horizontal" role="form" action="/login" method="POST">
+    <div class="form-group">
+      <label for="input-username" class="col-sm-3 control-label">お客様ご契約ID</label>
+      <div class="col-sm-9">
+        <input id="input-username" type="text" class="form-control" placeholder="半角英数字" name="login">
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="input-password" class="col-sm-3 control-label">パスワード</label>
+      <div class="col-sm-9">
+        <input type="password" class="form-control" id="input-password" name="password" placeholder="半角英数字・記号（２文字以上）">
+      </div>
+    </div>
+    <div class="form-group">
+      <div class="col-sm-offset-3 col-sm-9">
+        <button type="submit" class="btn btn-primary btn-lg btn-block">ログイン</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+    </div>
+
+  </body>
+</html>
+		`))
+	} else if param == "wrong" {
+		c.Data(200, "text/html", []byte(`
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <script id="css">
+    document.write('<link rel="stylesheet" href="/stylesheets/bootstrap.min.css"> <link rel="stylesheet" href="/stylesheets/bootflat.min.css"> <link rel="stylesheet" href="/stylesheets/isucon-bank.css">');
+    script = document.getElementById('css');
+    script.parentNode.removeChild(script);
+    </script>
+    <title>isucon4</title>
+  </head>
+  <body>
+    <div class="container">
+      <h1 id="topbar">
+        <a href="/">
+          <script id="img">
+          document.write('<img src="/images/isucon-bank.png" alt="いすこん銀行 オンラインバンキングサービス">');
+          script = document.getElementById('img');
+          script.parentNode.removeChild(script);
+          </script>
+        </a>
+      </h1>
+      <div id="be-careful-phising" class="panel panel-danger">
+  <div class="panel-heading">
+    <span class="hikaru-mozi">偽画面にご注意ください！</span>
+  </div>
+  <div class="panel-body">
+    <p>偽のログイン画面を表示しお客様の情報を盗み取ろうとする犯罪が多発しています。</p>
+    <p>ログイン直後にダウンロード中や、見知らぬウィンドウが開いた場合、<br>すでにウィルスに感染している場合がございます。即座に取引を中止してください。</p>
+    <p>また、残高照会のみなど、必要のない場面で乱数表の入力を求められても、<br>絶対に入力しないでください。</p>
+  </div>
+</div>
+
+<div class="page-header">
+  <h1>ログイン</h1>
+</div>
+
+  <div id="notice-message" class="alert alert-danger" role="alert">Wrong username or password</div>
+
+<div class="container">
+  <form class="form-horizontal" role="form" action="/login" method="POST">
+    <div class="form-group">
+      <label for="input-username" class="col-sm-3 control-label">お客様ご契約ID</label>
+      <div class="col-sm-9">
+        <input id="input-username" type="text" class="form-control" placeholder="半角英数字" name="login">
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="input-password" class="col-sm-3 control-label">パスワード</label>
+      <div class="col-sm-9">
+        <input type="password" class="form-control" id="input-password" name="password" placeholder="半角英数字・記号（２文字以上）">
+      </div>
+    </div>
+    <div class="form-group">
+      <div class="col-sm-offset-3 col-sm-9">
+        <button type="submit" class="btn btn-primary btn-lg btn-block">ログイン</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+    </div>
+
+  </body>
+</html>
+		`))
+	} else if param == "invalid" {
+		c.Data(200, "text/html", []byte(`
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <script id="css">
+    document.write('<link rel="stylesheet" href="/stylesheets/bootstrap.min.css"> <link rel="stylesheet" href="/stylesheets/bootflat.min.css"> <link rel="stylesheet" href="/stylesheets/isucon-bank.css">');
+    script = document.getElementById('css');
+    script.parentNode.removeChild(script);
+    </script>
+    <title>isucon4</title>
+  </head>
+  <body>
+    <div class="container">
+      <h1 id="topbar">
+        <a href="/">
+          <script id="img">
+          document.write('<img src="/images/isucon-bank.png" alt="いすこん銀行 オンラインバンキングサービス">');
+          script = document.getElementById('img');
+          script.parentNode.removeChild(script);
+          </script>
+        </a>
+      </h1>
+      <div id="be-careful-phising" class="panel panel-danger">
+  <div class="panel-heading">
+    <span class="hikaru-mozi">偽画面にご注意ください！</span>
+  </div>
+  <div class="panel-body">
+    <p>偽のログイン画面を表示しお客様の情報を盗み取ろうとする犯罪が多発しています。</p>
+    <p>ログイン直後にダウンロード中や、見知らぬウィンドウが開いた場合、<br>すでにウィルスに感染している場合がございます。即座に取引を中止してください。</p>
+    <p>また、残高照会のみなど、必要のない場面で乱数表の入力を求められても、<br>絶対に入力しないでください。</p>
+  </div>
+</div>
+
+<div class="page-header">
+  <h1>ログイン</h1>
+</div>
+
+  <div id="notice-message" class="alert alert-danger" role="alert">You must be logged in</div>
+
+<div class="container">
+  <form class="form-horizontal" role="form" action="/login" method="POST">
+    <div class="form-group">
+      <label for="input-username" class="col-sm-3 control-label">お客様ご契約ID</label>
+      <div class="col-sm-9">
+        <input id="input-username" type="text" class="form-control" placeholder="半角英数字" name="login">
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="input-password" class="col-sm-3 control-label">パスワード</label>
+      <div class="col-sm-9">
+        <input type="password" class="form-control" id="input-password" name="password" placeholder="半角英数字・記号（２文字以上）">
+      </div>
+    </div>
+    <div class="form-group">
+      <div class="col-sm-offset-3 col-sm-9">
+        <button type="submit" class="btn btn-primary btn-lg btn-block">ログイン</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+    </div>
+
+  </body>
+</html>
+		`))
+	} else if param == "locked" {
+		c.Data(200, "text/html", []byte(`
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <script id="css">
+    document.write('<link rel="stylesheet" href="/stylesheets/bootstrap.min.css"> <link rel="stylesheet" href="/stylesheets/bootflat.min.css"> <link rel="stylesheet" href="/stylesheets/isucon-bank.css">');
+    script = document.getElementById('css');
+    script.parentNode.removeChild(script);
+    </script>
+    <title>isucon4</title>
+  </head>
+  <body>
+    <div class="container">
+      <h1 id="topbar">
+        <a href="/">
+          <script id="img">
+          document.write('<img src="/images/isucon-bank.png" alt="いすこん銀行 オンラインバンキングサービス">');
+          script = document.getElementById('img');
+          script.parentNode.removeChild(script);
+          </script>
+        </a>
+      </h1>
+      <div id="be-careful-phising" class="panel panel-danger">
+  <div class="panel-heading">
+    <span class="hikaru-mozi">偽画面にご注意ください！</span>
+  </div>
+  <div class="panel-body">
+    <p>偽のログイン画面を表示しお客様の情報を盗み取ろうとする犯罪が多発しています。</p>
+    <p>ログイン直後にダウンロード中や、見知らぬウィンドウが開いた場合、<br>すでにウィルスに感染している場合がございます。即座に取引を中止してください。</p>
+    <p>また、残高照会のみなど、必要のない場面で乱数表の入力を求められても、<br>絶対に入力しないでください。</p>
+  </div>
+</div>
+
+<div class="page-header">
+  <h1>ログイン</h1>
+</div>
+
+  <div id="notice-message" class="alert alert-danger" role="alert">This account is locked.</div>
+
+<div class="container">
+  <form class="form-horizontal" role="form" action="/login" method="POST">
+    <div class="form-group">
+      <label for="input-username" class="col-sm-3 control-label">お客様ご契約ID</label>
+      <div class="col-sm-9">
+        <input id="input-username" type="text" class="form-control" placeholder="半角英数字" name="login">
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="input-password" class="col-sm-3 control-label">パスワード</label>
+      <div class="col-sm-9">
+        <input type="password" class="form-control" id="input-password" name="password" placeholder="半角英数字・記号（２文字以上）">
+      </div>
+    </div>
+    <div class="form-group">
+      <div class="col-sm-offset-3 col-sm-9">
+        <button type="submit" class="btn btn-primary btn-lg btn-block">ログイン</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+    </div>
+
+  </body>
+</html>
+		`))
+	} else {
+		c.Data(200, "text/html", []byte(`
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <script id="css">
+    document.write('<link rel="stylesheet" href="/stylesheets/bootstrap.min.css"> <link rel="stylesheet" href="/stylesheets/bootflat.min.css"> <link rel="stylesheet" href="/stylesheets/isucon-bank.css">');
+    script = document.getElementById('css');
+    script.parentNode.removeChild(script);
+    </script>
+    <title>isucon4</title>
+  </head>
+  <body>
+    <div class="container">
+      <h1 id="topbar">
+        <a href="/">
+          <script id="img">
+          document.write('<img src="/images/isucon-bank.png" alt="いすこん銀行 オンラインバンキングサービス">');
+          script = document.getElementById('img');
+          script.parentNode.removeChild(script);
+          </script>
+        </a>
+      </h1>
+      <div id="be-careful-phising" class="panel panel-danger">
+  <div class="panel-heading">
+    <span class="hikaru-mozi">偽画面にご注意ください！</span>
+  </div>
+  <div class="panel-body">
+    <p>偽のログイン画面を表示しお客様の情報を盗み取ろうとする犯罪が多発しています。</p>
+    <p>ログイン直後にダウンロード中や、見知らぬウィンドウが開いた場合、<br>すでにウィルスに感染している場合がございます。即座に取引を中止してください。</p>
+    <p>また、残高照会のみなど、必要のない場面で乱数表の入力を求められても、<br>絶対に入力しないでください。</p>
+  </div>
+</div>
+
+<div class="page-header">
+  <h1>ログイン</h1>
+</div>
+
+
+<div class="container">
+  <form class="form-horizontal" role="form" action="/login" method="POST">
+    <div class="form-group">
+      <label for="input-username" class="col-sm-3 control-label">お客様ご契約ID</label>
+      <div class="col-sm-9">
+        <input id="input-username" type="text" class="form-control" placeholder="半角英数字" name="login">
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="input-password" class="col-sm-3 control-label">パスワード</label>
+      <div class="col-sm-9">
+        <input type="password" class="form-control" id="input-password" name="password" placeholder="半角英数字・記号（２文字以上）">
+      </div>
+    </div>
+    <div class="form-group">
+      <div class="col-sm-offset-3 col-sm-9">
+        <button type="submit" class="btn btn-primary btn-lg btn-block">ログイン</button>
+      </div>
+    </div>
+  </form>
+</div>
+
+    </div>
+
+  </body>
+</html>
+		`))
+	}
 }
 
 func loadLoginLog(c *gin.Context) {
