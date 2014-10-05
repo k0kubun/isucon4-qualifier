@@ -3,18 +3,16 @@ package main
 import (
 	"database/sql"
 	"fmt"
-	"github.com/go-martini/martini"
+	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/martini-contrib/render"
-	"github.com/martini-contrib/sessions"
-	// "net"
-	"net/http"
+	"github.com/gorilla/sessions"
 	"strconv"
 	"runtime"
 )
 
 var db *sql.DB
 var logger *Logger
+var store = sessions.NewCookieStore([]byte("secret-isucon"))
 var (
 	UserLockThreshold int
 	IPBanThreshold    int
@@ -50,44 +48,54 @@ func init() {
 	logger = new(Logger)
 }
 
-func getIndex(r render.Render, session sessions.Session) {
-	r.HTML(200, "index", map[string]string{"Flash": getFlash(session, "notice")})
+func getIndex(c *gin.Context) {
+	c.HTML(200, "index.tmpl", gin.H{"Flash": getFlash(c, "notice")})
 }
 
-func postLogin(req *http.Request, r render.Render, session sessions.Session) {
-	user, err := attemptLogin(req)
+func postLogin(c *gin.Context) {
+	user, err := attemptLogin(c.Request)
 
 	if err != nil || user == nil {
 		switch err {
 		case ErrBannedIP:
-			r.Redirect("/?err=banned")
+			c.Redirect(302, "/?err=banned")
 		case ErrLockedUser:
-			r.Redirect("/?err=locked")
+			c.Redirect(302, "/?err=locked")
 		default:
-			r.Redirect("/?err=wrong")
+			c.Redirect(302, "/?err=wrong")
 		}
 
 		return
 	}
 
-	session.Set("user_id", strconv.Itoa(user.ID))
-	r.Redirect("/mypage")
+	session, _ := store.Get(c.Request, "isu4_qualifier")
+	session.Values["user_id"] = strconv.Itoa(user.ID)
+	session.Save(c.Request, c.Writer)
+
+	c.Redirect(302, "/mypage")
 }
 
-func getMypage(r render.Render, session sessions.Session) {
-	currentUser := getCurrentUser(session.Get("user_id"))
+func getMypage(c *gin.Context) {
+	var currentUser *User
+
+	session, _ := store.Get(c.Request, "isu4_qualifier")
+	if userId, ok := session.Values["user_id"]; ok {
+		currentUser = getCurrentUser(userId)
+	} else {
+		currentUser = nil
+	}
 
 	if currentUser == nil {
-		r.Redirect("/?err=invalid")
+		c.Redirect(301, "/?err=invalid")
 		return
 	}
 
 	currentUser.getLastLogin()
-	r.HTML(200, "mypage", currentUser)
+	c.HTML(200, "mypage.tmpl", currentUser)
 }
 
-func getReport(r render.Render) {
-	r.JSON(200, map[string][]string{
+func getReport(c *gin.Context) {
+	c.JSON(200, map[string][]string{
 		"banned_ips":   bannedIPs(),
 		"locked_users": lockedUsers(),
 	})
@@ -96,28 +104,13 @@ func getReport(r render.Render) {
 func main() {
 	runtime.GOMAXPROCS(4)
 
-	m := martini.Classic()
+	r := gin.Default()
+	r.LoadHTMLTemplates("./*")
 
-	store := sessions.NewCookieStore([]byte("secret-isucon"))
-	m.Use(sessions.Sessions("isucon_go_session", store))
+	r.GET("/", getIndex)
+	r.GET("/mypage", getMypage)
+	r.GET("/report", getReport)
+	r.POST("/login", postLogin)
 
-	// m.Use(martini.Static("../public"))
-	m.Use(render.Renderer(render.Options{
-		Layout: "layout",
-	}))
-
-	m.Get("/", getIndex)
-	m.Get("/mypage", getMypage)
-	m.Get("/report", getReport)
-	m.Post("/login", postLogin)
-
-	// l, err := net.Listen("unix", "/tmp/app.sock")
-	// if err != nil {
-	// 	fmt.Println(err.Error())
-	// 	return
-	// }
-
-	// http.Serve(l, m)
-
-	http.ListenAndServe(":8080", m)
+	r.Run(":8080")
 }

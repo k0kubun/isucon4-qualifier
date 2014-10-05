@@ -3,7 +3,7 @@ package main
 import (
 	"crypto/sha256"
 	"fmt"
-	"github.com/martini-contrib/sessions"
+	"github.com/gin-gonic/gin"
 	"io"
 	"os"
 )
@@ -17,14 +17,13 @@ func getEnv(key string, def string) string {
 	return v
 }
 
-func getFlash(session sessions.Session, key string) string {
-	value := session.Get(key)
+func getFlash(c *gin.Context, key string) string {
+	session, _ := store.Get(c.Request, "isu4_qualifier")
 
-	if value == nil {
-		return ""
-	} else {
-		session.Delete(key)
+	if value, ok := session.Values[key]; ok {
 		return value.(string)
+	} else {
+		return ""
 	}
 }
 
