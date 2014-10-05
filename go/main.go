@@ -45,11 +45,43 @@ func init() {
 		panic(err)
 	}
 
-	logger = new(Logger)
+	logger = NewLogger()
 }
 
 func getIndex(c *gin.Context) {
 	c.HTML(200, "index.tmpl", gin.H{"Flash": getFlash(c, "notice")})
+}
+
+func loadLoginLog(c *gin.Context) {
+	logger.LoadLoginLog()
+	c.String(200, "done")
+}
+
+func getMypage(c *gin.Context) {
+	var currentUser *User
+
+	session, _ := store.Get(c.Request, "isu4_qualifier")
+	if userId, ok := session.Values["user_id"]; ok {
+		currentUser = getCurrentUser(userId)
+	} else {
+		currentUser = nil
+	}
+
+	if currentUser == nil {
+		c.Redirect(301, "/?err=invalid")
+		return
+	}
+
+	currentUser.getLastLogin()
+	c.HTML(200, "mypage.tmpl", currentUser)
+}
+
+func getReport(c *gin.Context) {
+	logger.FlushLoginLog()
+	c.JSON(200, map[string][]string{
+		"banned_ips":   bannedIPs(),
+		"locked_users": lockedUsers(),
+	})
 }
 
 func postLogin(c *gin.Context) {
@@ -75,32 +107,6 @@ func postLogin(c *gin.Context) {
 	c.Redirect(302, "/mypage")
 }
 
-func getMypage(c *gin.Context) {
-	var currentUser *User
-
-	session, _ := store.Get(c.Request, "isu4_qualifier")
-	if userId, ok := session.Values["user_id"]; ok {
-		currentUser = getCurrentUser(userId)
-	} else {
-		currentUser = nil
-	}
-
-	if currentUser == nil {
-		c.Redirect(301, "/?err=invalid")
-		return
-	}
-
-	currentUser.getLastLogin()
-	c.HTML(200, "mypage.tmpl", currentUser)
-}
-
-func getReport(c *gin.Context) {
-	c.JSON(200, map[string][]string{
-		"banned_ips":   bannedIPs(),
-		"locked_users": lockedUsers(),
-	})
-}
-
 func main() {
 	runtime.GOMAXPROCS(4)
 
@@ -108,6 +114,7 @@ func main() {
 	r.LoadHTMLTemplates("./*")
 
 	r.GET("/", getIndex)
+	r.GET("/init", loadLoginLog)
 	r.GET("/mypage", getMypage)
 	r.GET("/report", getReport)
 	r.POST("/login", postLogin)
