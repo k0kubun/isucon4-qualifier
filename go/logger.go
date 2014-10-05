@@ -30,8 +30,28 @@ func NewLogger() *Logger {
 // Loads all login_log from mysql, and enables OnMemoryMode.
 // Then all methods' return value will be decided by logger's internal variables.
 func (l *Logger) LoadLoginLog() {
+	// Initialize logger
 	l.OnMemoryMode = true
 	l.failCountByIp = make(map[string]int)
+
+	for i := 0; i < 7; i++ {
+		rows, err := db.Query(
+			"SELECT created_at, user_id, login, ip, succeeded FROM login_log WHERE id BETWEEN ? AND ?;",
+			1 + i * 10000, (i+1) * 10000,
+		)
+
+		if err != nil {
+			panic("This should not raise error")
+		}
+
+		log := &LoginLog{}
+		for rows.Next() {
+			rows.Scan(&log.CreatedAt, &log.UserId, &log.Login, &log.Ip, &log.Succeeded)
+			l.applyLoginLog(log)
+		}
+
+		rows.Close()
+	}
 }
 
 // Inserts all queued login_log by bulk insert.
@@ -42,16 +62,29 @@ func (l *Logger) FlushLoginLog() {
 }
 
 func (l *Logger) Post(log *LoginLog) error {
-	return l.insertLoginLog(log)
+	if l.OnMemoryMode {
+		l.queueLoginLog(log)
+		l.applyLoginLog(log)
+		return l.insertLoginLog(log) // TODO: This should be removed later
+	} else {
+		return l.insertLoginLog(log)
+	}
 }
 
 // Apply login_log to logger's internal variables.
 func (l *Logger) applyLoginLog(log *LoginLog) error {
+	if log.Succeeded {
+		l.failCountByIp[log.Ip] = 0
+	} else {
+		l.failCountByIp[log.Ip]++
+	}
+
 	return nil
 }
 
 // Queue login_log. It will be executed by FlushLoginLog().
-func (l *Logger) queueLoginLog() error {
+func (l *Logger) queueLoginLog(log *LoginLog) error {
+	// TODO: implement
 	return nil
 }
 
@@ -103,24 +136,29 @@ func (l *Logger) isLockedUserId(userId int) (bool, error) {
 // Whether login failure count for ip is over threshold or not
 func (l *Logger) isBannedIP(ip string) (bool, error) {
 	var failCount int
-	var ni sql.NullInt64
 
-	row := db.QueryRow(
-		"SELECT COUNT(1) AS failures FROM login_log WHERE "+
-			"ip = ? AND id > IFNULL((select id from login_log where ip = ? AND "+
-			"succeeded = 1 ORDER BY id DESC LIMIT 1), 0);",
-		ip, ip,
-	)
-	err := row.Scan(&ni)
+	if l.OnMemoryMode {
+		failCount = l.failCountByIp[ip]
+	} else {
+		var ni sql.NullInt64
 
-	switch {
-	case err == sql.ErrNoRows:
-		return false, nil
-	case err != nil:
-		return false, err
+		row := db.QueryRow(
+			"SELECT COUNT(1) AS failures FROM login_log WHERE "+
+				"ip = ? AND id > IFNULL((select id from login_log where ip = ? AND "+
+				"succeeded = 1 ORDER BY id DESC LIMIT 1), 0);",
+			ip, ip,
+		)
+		err := row.Scan(&ni)
+
+		switch {
+		case err == sql.ErrNoRows:
+			return false, nil
+		case err != nil:
+			return false, err
+		}
+
+		failCount = int(ni.Int64)
 	}
-
-	failCount = int(ni.Int64)
 
 	return IPBanThreshold <= failCount, nil
 }
