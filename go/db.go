@@ -14,9 +14,15 @@ var (
 )
 
 func createLoginLog(succeeded bool, remoteAddr, login string, user *User) error {
+	var userId int
+
+	if user != nil {
+		userId = user.ID
+	}
+
 	err := storage.PostLoginLog(&LoginLog{
 		CreatedAt: time.Now(),
-		UserId:    user.ID,
+		UserId:    userId,
 		Login:     login,
 		Ip:        remoteAddr,
 		Succeeded: succeeded,

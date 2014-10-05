@@ -3,6 +3,7 @@ package main
 import (
 	"time"
 	"database/sql"
+	"fmt"
 )
 
 type LoginLog struct {
@@ -16,14 +17,15 @@ type LoginLog struct {
 type Storage struct {
 	// True:  All login_log is on memory, insert query will be not executed but queued
 	// False: Load and insert login_log by executing mysql query
-	OnMemoryMode  bool
+	OnMemoryMode bool
 
-	failCountByUserId map[int]int
-	failCountByIp map[string]int
-	userByLogin   map[string]*User
-	userById      map[int]*User
+	failCountByUserId    map[int]int
+	failCountByIp        map[string]int
+	userByLogin          map[string]*User
+	userById             map[int]*User
 	currentLoginByUserId map[int]*LastLogin
-	lastLoginByUserId map[int]*LastLogin
+	lastLoginByUserId    map[int]*LastLogin
+	queue                []LoginLog
 }
 
 func NewStorage() *Storage {
@@ -40,6 +42,7 @@ func (s *Storage) EnableOnMemoryMode() {
 	s.userById = make(map[int]*User, 200000)
 	s.currentLoginByUserId = make(map[int]*LastLogin, 200000)
 	s.lastLoginByUserId = make(map[int]*LastLogin, 200000)
+	s.queue = []LoginLog{}
 }
 
 func (s *Storage) DisableOnMemoryMode() {
@@ -50,6 +53,7 @@ func (s *Storage) DisableOnMemoryMode() {
 	s.userById = map[int]*User{}
 	s.currentLoginByUserId = map[int]*LastLogin{}
 	s.lastLoginByUserId = map[int]*LastLogin{}
+	s.queue = []LoginLog{}
 }
 
 // Loads all data from mysql, and enables OnMemoryMode.
@@ -92,6 +96,18 @@ func (s *Storage) LoadOnMemory() {
 // Inserts all queued login_log by bulk insert.
 // Then disable OnMemoryMode.
 func (s *Storage) FlushLoginLog() {
+	batchSize := 500
+	length := len(s.queue)
+
+	for i := 0; i * batchSize < length; i++ {
+		startPos := i * batchSize
+		endPos := (i+1) * batchSize
+		if endPos > length {
+			endPos = length
+		}
+		s.bulkInsertLoginLog(s.queue[startPos:endPos])
+	}
+
 	s.DisableOnMemoryMode()
 }
 
@@ -99,8 +115,7 @@ func (s *Storage) FlushLoginLog() {
 func (s *Storage) PostLoginLog(log *LoginLog) error {
 	if s.OnMemoryMode {
 		s.queueLoginLog(log)
-		s.applyLoginLog(log)
-		return s.insertLoginLog(log) // TODO: This should be removed later
+		return s.applyLoginLog(log)
 	} else {
 		return s.insertLoginLog(log)
 	}
@@ -127,9 +142,28 @@ func (s *Storage) applyLoginLog(log *LoginLog) error {
 }
 
 // Queue login_log. It will be executed by FlushLoginLog().
-func (s *Storage) queueLoginLog(log *LoginLog) error {
-	// TODO: implement
-	return nil
+func (s *Storage) queueLoginLog(log *LoginLog) {
+	s.queue = append(s.queue, *log)
+}
+
+func (s *Storage) bulkInsertLoginLog(logs []LoginLog) {
+	values := ""
+
+	lastIndex := len(logs) - 1
+	for i, log := range logs {
+		succ := 0
+		if log.Succeeded {
+			succ = 1
+		}
+
+		values += fmt.Sprintf("('%s',%d,'%s','%s',%d)", log.CreatedAt.Format("2006-01-02 15:04:05"), log.UserId, log.Login, log.Ip, succ)
+		if i != lastIndex {
+			values += ","
+		}
+	}
+
+	query := fmt.Sprintf("INSERT INTO login_log(created_at, user_id, login, ip, succeeded) VALUES %s ON DUPLICATE KEY UPDATE login_log.created_at=VALUES(created_at), login_log.user_id=VALUES(user_id), login_log.login=VALUES(login), login_log.ip=VALUES(ip), login_log.succeeded=VALUES(succeeded);", values)
+	db.Exec(query)
 }
 
 // Direct logging to mysql.
