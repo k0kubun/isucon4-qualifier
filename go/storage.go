@@ -32,8 +32,8 @@ func NewStorage() *Storage {
 func (s *Storage) EnableOnMemoryMode() {
 	s.OnMemoryMode = true
 	s.failCountByUserId = make(map[int]int, 200000)
-	s.failCountByIp = make(map[string]int)
-	s.userByLogin = make(map[string]*User)
+	s.failCountByIp = make(map[string]int, 100000)
+	s.userByLogin = make(map[string]*User, 200000)
 }
 
 func (s *Storage) DisableOnMemoryMode() {
