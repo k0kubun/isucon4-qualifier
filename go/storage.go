@@ -19,6 +19,7 @@ type Storage struct {
 	OnMemoryMode  bool
 
 	failCountByIp map[string]int
+	userByLogin   map[string]*User
 }
 
 func NewStorage() *Storage {
@@ -37,25 +38,36 @@ func (s *Storage) DisableOnMemoryMode() {
 	s.failCountByIp = map[string]int{}
 }
 
-// Loads all login_log from mysql, and enables OnMemoryMode.
+// Loads all data from mysql, and enables OnMemoryMode.
 // Then all methods' return value will be decided by storage's internal variables.
-func (s *Storage) LoadLoginLog() {
+func (s *Storage) LoadOnMemory() {
 	s.EnableOnMemoryMode()
 
 	for i := 0; i < 7; i++ {
-		rows, err := db.Query(
+		rows, _ := db.Query(
 			"SELECT created_at, user_id, login, ip, succeeded FROM login_log WHERE id BETWEEN ? AND ?;",
 			1 + i * 10000, (i+1) * 10000,
 		)
-
-		if err != nil {
-			panic("This should not raise error")
-		}
 
 		log := &LoginLog{}
 		for rows.Next() {
 			rows.Scan(&log.CreatedAt, &log.UserId, &log.Login, &log.Ip, &log.Succeeded)
 			s.applyLoginLog(log)
+		}
+
+		rows.Close()
+	}
+
+	for i := 0; i < 20; i++ {
+		rows, _ := db.Query(
+			"SELECT id, login, password_hash, salt FROM users WHERE id BETWEEN ? AND ?;",
+			1 + i * 10000, (i+1) * 10000,
+		)
+
+		for rows.Next() {
+			user := new(User)
+			rows.Scan(&user.ID, &user.Login, &user.PasswordHash, &user.Salt)
+			s.userByLogin[user.Login] = user
 		}
 
 		rows.Close()

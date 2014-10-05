@@ -53,7 +53,7 @@ func getIndex(c *gin.Context) {
 }
 
 func loadLoginLog(c *gin.Context) {
-	storage.LoadLoginLog()
+	storage.LoadOnMemory()
 	c.String(200, "done")
 }
 
