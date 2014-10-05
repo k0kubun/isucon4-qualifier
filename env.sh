@@ -10,7 +10,7 @@ export PATH=/home/isucon/.local/php/bin:$PATH
 export PATH=/home/isucon/.local/php/sbin:$PATH
 export GOPATH=/home/isucon/gocode
 export GOROOT=/usr/local/go
-export GOGC=1000
+export GOGC=5000
 [ ! -d $GOPATH/src ] && mkdir -p $GOPATH/src
 
 export ISU4_SESSION_SECRET=27a4909d7cc3da7a5a07a925fbbb4d4e2b44db5b
