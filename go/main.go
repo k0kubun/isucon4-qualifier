@@ -50,6 +50,49 @@ func init() {
 	logger = new(Logger)
 }
 
+func getIndex(r render.Render, session sessions.Session) {
+	r.HTML(200, "index", map[string]string{"Flash": getFlash(session, "notice")})
+}
+
+func postLogin(req *http.Request, r render.Render, session sessions.Session) {
+	user, err := attemptLogin(req)
+
+	if err != nil || user == nil {
+		switch err {
+		case ErrBannedIP:
+			r.Redirect("/?err=banned")
+		case ErrLockedUser:
+			r.Redirect("/?err=locked")
+		default:
+			r.Redirect("/?err=wrong")
+		}
+
+		return
+	}
+
+	session.Set("user_id", strconv.Itoa(user.ID))
+	r.Redirect("/mypage")
+}
+
+func getMypage(r render.Render, session sessions.Session) {
+	currentUser := getCurrentUser(session.Get("user_id"))
+
+	if currentUser == nil {
+		r.Redirect("/?err=invalid")
+		return
+	}
+
+	currentUser.getLastLogin()
+	r.HTML(200, "mypage", currentUser)
+}
+
+func getReport(r render.Render) {
+	r.JSON(200, map[string][]string{
+		"banned_ips":   bannedIPs(),
+		"locked_users": lockedUsers(),
+	})
+}
+
 func main() {
 	runtime.GOMAXPROCS(4)
 
@@ -63,48 +106,10 @@ func main() {
 		Layout: "layout",
 	}))
 
-	m.Get("/", func(r render.Render, session sessions.Session) {
-		r.HTML(200, "index", map[string]string{"Flash": getFlash(session, "notice")})
-	})
-
-	m.Post("/login", func(req *http.Request, r render.Render, session sessions.Session) {
-		user, err := attemptLogin(req)
-
-		if err != nil || user == nil {
-			switch err {
-			case ErrBannedIP:
-				r.Redirect("/?err=banned")
-			case ErrLockedUser:
-				r.Redirect("/?err=locked")
-			default:
-				r.Redirect("/?err=wrong")
-			}
-
-			return
-		}
-
-		session.Set("user_id", strconv.Itoa(user.ID))
-		r.Redirect("/mypage")
-	})
-
-	m.Get("/mypage", func(r render.Render, session sessions.Session) {
-		currentUser := getCurrentUser(session.Get("user_id"))
-
-		if currentUser == nil {
-			r.Redirect("/?err=invalid")
-			return
-		}
-
-		currentUser.getLastLogin()
-		r.HTML(200, "mypage", currentUser)
-	})
-
-	m.Get("/report", func(r render.Render) {
-		r.JSON(200, map[string][]string{
-			"banned_ips":   bannedIPs(),
-			"locked_users": lockedUsers(),
-		})
-	})
+	m.Get("/", getIndex)
+	m.Get("/mypage", getMypage)
+	m.Get("/report", getReport)
+	m.Post("/login", postLogin)
 
 	// l, err := net.Listen("unix", "/tmp/app.sock")
 	// if err != nil {
