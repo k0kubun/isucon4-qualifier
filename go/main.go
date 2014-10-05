@@ -101,7 +101,7 @@ func main() {
 	store := sessions.NewCookieStore([]byte("secret-isucon"))
 	m.Use(sessions.Sessions("isucon_go_session", store))
 
-	m.Use(martini.Static("../public"))
+	// m.Use(martini.Static("../public"))
 	m.Use(render.Renderer(render.Options{
 		Layout: "layout",
 	}))
