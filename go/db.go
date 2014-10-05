@@ -15,22 +15,13 @@ var (
 )
 
 func createLoginLog(succeeded bool, remoteAddr, login string, user *User) error {
-	succ := 0
-	if succeeded {
-		succ = 1
-	}
-
-	var userId sql.NullInt64
-	if user != nil {
-		userId.Int64 = int64(user.ID)
-		userId.Valid = true
-	}
-
-	_, err := db.Exec(
-		"INSERT INTO login_log (`created_at`, `user_id`, `login`, `ip`, `succeeded`) "+
-			"VALUES (?,?,?,?,?)",
-		time.Now(), userId, login, remoteAddr, succ,
-	)
+	err := logger.Post(&LoginLog{
+		CreatedAt: time.Now(),
+		UserId: user.ID,
+		Login: login,
+		Ip: remoteAddr,
+		Succeeded: succeeded,
+	})
 
 	return err
 }

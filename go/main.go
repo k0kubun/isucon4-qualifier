@@ -14,6 +14,7 @@ import (
 )
 
 var db *sql.DB
+var logger *Logger
 var (
 	UserLockThreshold int
 	IPBanThreshold    int
@@ -45,6 +46,8 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+
+	logger = new(Logger)
 }
 
 func main() {
