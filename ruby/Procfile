@@ -1,1 +1,0 @@
-unicorn: RACK_ENV=production ISU4_DB_SOCKET=/var/lib/mysql/mysql.sock bundle exec unicorn -c unicorn_config.rb
