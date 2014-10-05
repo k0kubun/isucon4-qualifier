@@ -31,11 +31,13 @@ func NewStorage() *Storage {
 func (s *Storage) EnableOnMemoryMode() {
 	s.OnMemoryMode = true
 	s.failCountByIp = make(map[string]int)
+	s.userByLogin = make(map[string]*User)
 }
 
 func (s *Storage) DisableOnMemoryMode() {
 	s.OnMemoryMode = false
 	s.failCountByIp = map[string]int{}
+	s.userByLogin = map[string]*User{}
 }
 
 // Loads all data from mysql, and enables OnMemoryMode.
@@ -206,4 +208,27 @@ func (s *Storage) lastLoginOfUserId(userId int) *LastLogin {
 	}
 
 	return lastLogin
+}
+
+func (s *Storage) userByLoginName(loginName string) *User {
+	if s.OnMemoryMode {
+		if user, ok := s.userByLogin[loginName]; ok {
+			return user
+		} else {
+			return nil
+		}
+	} else {
+		user := &User{}
+
+		row := db.QueryRow(
+			"SELECT id, login, password_hash, salt FROM users WHERE login = ?",
+			loginName,
+		)
+		err := row.Scan(&user.ID, &user.Login, &user.PasswordHash, &user.Salt)
+		if err != nil {
+			return nil
+		}
+
+		return user
+	}
 }
