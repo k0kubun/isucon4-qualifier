@@ -529,7 +529,7 @@ func postLogin(c *gin.Context) {
 func main() {
 	runtime.GOMAXPROCS(4)
 
-	r := gin.Default()
+	r := gin.New()
 
 	r.GET("/", getIndex)
 	r.GET("/init", loadLoginLog)
