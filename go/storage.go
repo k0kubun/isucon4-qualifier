@@ -18,6 +18,7 @@ type Storage struct {
 	// False: Load and insert login_log by executing mysql query
 	OnMemoryMode  bool
 
+	failCountByUserId map[int]int
 	failCountByIp map[string]int
 	userByLogin   map[string]*User
 }
@@ -30,12 +31,14 @@ func NewStorage() *Storage {
 
 func (s *Storage) EnableOnMemoryMode() {
 	s.OnMemoryMode = true
+	s.failCountByUserId = make(map[int]int, 200000)
 	s.failCountByIp = make(map[string]int)
 	s.userByLogin = make(map[string]*User)
 }
 
 func (s *Storage) DisableOnMemoryMode() {
 	s.OnMemoryMode = false
+	s.failCountByUserId = map[int]int{}
 	s.failCountByIp = map[string]int{}
 	s.userByLogin = map[string]*User{}
 }
@@ -97,8 +100,10 @@ func (s *Storage) PostLoginLog(log *LoginLog) error {
 func (s *Storage) applyLoginLog(log *LoginLog) error {
 	if log.Succeeded {
 		s.failCountByIp[log.Ip] = 0
+		s.failCountByUserId[log.UserId] = 0
 	} else {
 		s.failCountByIp[log.Ip]++
+		s.failCountByUserId[log.UserId]++
 	}
 
 	return nil
@@ -133,24 +138,29 @@ func (s *Storage) insertLoginLog(log *LoginLog) error {
 // Whether login failure count for userId is over threshold or not
 func (s *Storage) isLockedUserId(userId int) (bool, error) {
 	var failCount int
-	var ni sql.NullInt64
 
-	row := db.QueryRow(
-		"SELECT COUNT(1) AS failures FROM login_log WHERE "+
-			"user_id = ? AND id > IFNULL((select id from login_log where user_id = ? AND "+
-			"succeeded = 1 ORDER BY id DESC LIMIT 1), 0);",
-		userId, userId,
-	)
-	err := row.Scan(&ni)
+	if s.OnMemoryMode {
+		failCount = s.failCountByUserId[userId]
+	} else {
+		var ni sql.NullInt64
 
-	switch {
-	case err == sql.ErrNoRows:
-		return false, nil
-	case err != nil:
-		return false, err
+		row := db.QueryRow(
+			"SELECT COUNT(1) AS failures FROM login_log WHERE "+
+				"user_id = ? AND id > IFNULL((select id from login_log where user_id = ? AND "+
+				"succeeded = 1 ORDER BY id DESC LIMIT 1), 0);",
+			userId, userId,
+		)
+		err := row.Scan(&ni)
+
+		switch {
+		case err == sql.ErrNoRows:
+			return false, nil
+		case err != nil:
+			return false, err
+		}
+
+		failCount = int(ni.Int64)
 	}
-
-	failCount = int(ni.Int64)
 
 	return UserLockThreshold <= failCount, nil
 }
