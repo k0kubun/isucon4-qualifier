@@ -27,12 +27,20 @@ func NewStorage() *Storage {
 	}
 }
 
+func (s *Storage) EnableOnMemoryMode() {
+	s.OnMemoryMode = true
+	s.failCountByIp = make(map[string]int)
+}
+
+func (s *Storage) DisableOnMemoryMode() {
+	s.OnMemoryMode = false
+	s.failCountByIp = map[string]int{}
+}
+
 // Loads all login_log from mysql, and enables OnMemoryMode.
 // Then all methods' return value will be decided by storage's internal variables.
-func (l *Storage) LoadLoginLog() {
-	// Initialize storage
-	l.OnMemoryMode = true
-	l.failCountByIp = make(map[string]int)
+func (s *Storage) LoadLoginLog() {
+	s.EnableOnMemoryMode()
 
 	for i := 0; i < 7; i++ {
 		rows, err := db.Query(
@@ -47,7 +55,7 @@ func (l *Storage) LoadLoginLog() {
 		log := &LoginLog{}
 		for rows.Next() {
 			rows.Scan(&log.CreatedAt, &log.UserId, &log.Login, &log.Ip, &log.Succeeded)
-			l.applyLoginLog(log)
+			s.applyLoginLog(log)
 		}
 
 		rows.Close()
@@ -56,41 +64,40 @@ func (l *Storage) LoadLoginLog() {
 
 // Inserts all queued login_log by bulk insert.
 // Then disable OnMemoryMode.
-func (l *Storage) FlushLoginLog() {
-	l.OnMemoryMode = false
-	l.failCountByIp = map[string]int{}
+func (s *Storage) FlushLoginLog() {
+	s.DisableOnMemoryMode()
 }
 
 // Logging interface with storage switching
-func (l *Storage) PostLoginLog(log *LoginLog) error {
-	if l.OnMemoryMode {
-		l.queueLoginLog(log)
-		l.applyLoginLog(log)
-		return l.insertLoginLog(log) // TODO: This should be removed later
+func (s *Storage) PostLoginLog(log *LoginLog) error {
+	if s.OnMemoryMode {
+		s.queueLoginLog(log)
+		s.applyLoginLog(log)
+		return s.insertLoginLog(log) // TODO: This should be removed later
 	} else {
-		return l.insertLoginLog(log)
+		return s.insertLoginLog(log)
 	}
 }
 
 // Apply login_log to storage's internal variables.
-func (l *Storage) applyLoginLog(log *LoginLog) error {
+func (s *Storage) applyLoginLog(log *LoginLog) error {
 	if log.Succeeded {
-		l.failCountByIp[log.Ip] = 0
+		s.failCountByIp[log.Ip] = 0
 	} else {
-		l.failCountByIp[log.Ip]++
+		s.failCountByIp[log.Ip]++
 	}
 
 	return nil
 }
 
 // Queue login_log. It will be executed by FlushLoginLog().
-func (l *Storage) queueLoginLog(log *LoginLog) error {
+func (s *Storage) queueLoginLog(log *LoginLog) error {
 	// TODO: implement
 	return nil
 }
 
 // Direct logging to mysql.
-func (l *Storage) insertLoginLog(log *LoginLog) error {
+func (s *Storage) insertLoginLog(log *LoginLog) error {
 	succ := 0
 	if log.Succeeded {
 		succ = 1
@@ -110,7 +117,7 @@ func (l *Storage) insertLoginLog(log *LoginLog) error {
 }
 
 // Whether login failure count for userId is over threshold or not
-func (l *Storage) isLockedUserId(userId int) (bool, error) {
+func (s *Storage) isLockedUserId(userId int) (bool, error) {
 	var failCount int
 	var ni sql.NullInt64
 
@@ -135,11 +142,11 @@ func (l *Storage) isLockedUserId(userId int) (bool, error) {
 }
 
 // Whether login failure count for ip is over threshold or not
-func (l *Storage) isBannedIP(ip string) (bool, error) {
+func (s *Storage) isBannedIP(ip string) (bool, error) {
 	var failCount int
 
-	if l.OnMemoryMode {
-		failCount = l.failCountByIp[ip]
+	if s.OnMemoryMode {
+		failCount = s.failCountByIp[ip]
 	} else {
 		var ni sql.NullInt64
 
@@ -165,7 +172,7 @@ func (l *Storage) isBannedIP(ip string) (bool, error) {
 }
 
 // [last_login, current_login].compact.first
-func (l *Storage) lastLoginOfUserId(userId int) *LastLogin {
+func (s *Storage) lastLoginOfUserId(userId int) *LastLogin {
 	var lastLogin *LastLogin
 
 	rows, err := db.Query(
